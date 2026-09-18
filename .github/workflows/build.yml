@@ -86,3 +86,5 @@ jobs:
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
+
+# Triggered for the clean no-root favorites source archive.
