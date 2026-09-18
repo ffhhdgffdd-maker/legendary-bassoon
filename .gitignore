@@ -1,0 +1,10 @@
+/build/
+/dist/
+/keys/
+/.gradle/
+/.idea/
+*.iml
+*.jks
+*.keystore
+local.properties
+backend/public_html/wolfox-admin/config.php
