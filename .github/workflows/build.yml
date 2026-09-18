@@ -35,12 +35,13 @@ jobs:
           python3 tests/verify_provider_compatibility.py
           python3 tests/verify_icon_lifecycle_fix.py
       - name: Restore release signing key
-        if: ${{ secrets.WOLFOX_KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.WOLFOX_KEYSTORE_BASE64 }}
         run: |
-          mkdir -p keys
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > keys/wolfox-test.jks
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            mkdir -p keys
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > keys/wolfox-test.jks
+          fi
       - name: Configure signing environment
         env:
           RELEASE_STORE_PASS: ${{ secrets.WOLFOX_KEYSTORE_PASS }}
