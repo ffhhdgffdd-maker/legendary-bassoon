@@ -26,9 +26,19 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - uses: android-actions/setup-android@v3
-      - name: Install Android SDK packages
-        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - name: Configure Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          sdkmanager_bin="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager_bin"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+          echo "$sdk_root/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$sdk_root/platform-tools" >> "$GITHUB_PATH"
+          yes | "$sdkmanager_bin" --licenses >/dev/null || true
+          "$sdkmanager_bin" 'platforms;android-34' 'build-tools;34.0.0'
       - name: Run safety and compatibility tests
         run: |
           python3 tests/verify_no_root_dependency.py
@@ -59,12 +69,11 @@ jobs:
             echo "WOLFOX_KEY_ALIAS=wolfox-module" >> "$GITHUB_ENV"
           fi
       - name: Build SAFE CAMERA MULTI
-        env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
-          ANDROID_BUILD_TOOLS: ${{ env.ANDROID_HOME }}/build-tools/34.0.0
-          ANDROID_PLATFORM_JAR: ${{ env.ANDROID_HOME }}/platforms/android-34/android.jar
-          WOLFOX_KEYSTORE_PATH: ${{ github.workspace }}/keys/wolfox-test.jks
         run: |
+          set -euo pipefail
+          export ANDROID_BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/34.0.0"
+          export ANDROID_PLATFORM_JAR="$ANDROID_SDK_ROOT/platforms/android-34/android.jar"
+          export WOLFOX_KEYSTORE_PATH="$GITHUB_WORKSPACE/keys/wolfox-test.jks"
           chmod +x build-local.sh build-all-test-variants.sh
           ./build-all-test-variants.sh
       - name: Verify APKs and profiles
@@ -75,7 +84,7 @@ jobs:
             unzip -t "$apk"
             unzip -p "$apk" assets/xposed_init | grep -F 'com.wolfox.gps.hook.WolFoxHook'
             unzip -p "$apk" classes.dex | strings | grep -Fx "$profile"
-            "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose --print-certs "$apk"
+            "$ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner" verify --verbose --print-certs "$apk"
           done
           sha256sum -c dist/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
